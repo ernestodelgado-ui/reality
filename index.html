@@ -156,7 +156,7 @@ let filters = [];
 const glc = document.createElement("canvas");
 const gl = glc.getContext("webgl2", { alpha: false, antialias: false });
 let fluid = false, P = {}, vel, dye, pres, div, curl, vtex, velTexel = [1, 1];
-const FORCE = 5000, CURL = 20, VEL_DISS = 1.3, DYE_DISS = 1.8, ITER = 14, DISP = .09;
+const FORCE = 5000, CURL = 20, VEL_DISS = 1.3, DYE_DISS = 1.2, ITER = 14, DISP = .09;
 
 function initFluid() {
   if (!gl || !(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"))) return false;
@@ -178,10 +178,10 @@ precision highp float;precision highp sampler2D;in vec2 vUv,vL,vR,vT,vB;out vec4
   };
   try {
     P = {
-      splat: prog(`uniform sampler2D uT;uniform float uAsp,uRad;uniform vec2 uPt;uniform vec3 uCol;
-void main(){vec2 p=vUv-uPt;p.x*=uAsp;o=vec4(texture(uT,vUv).rgb+exp(-dot(p,p)/uRad)*uCol,1.);}`),
+      splat: prog(`uniform sampler2D uT;uniform float uAsp,uRad,uA;uniform vec2 uPt;uniform vec3 uCol;
+void main(){vec2 p=vUv-uPt;p.x*=uAsp;float g=exp(-dot(p,p)/uRad);vec4 t=texture(uT,vUv);o=vec4(t.rgb+g*uCol,t.a+g*uA);}`),
       adv: prog(`uniform sampler2D uVel,uSrc;uniform float uDt,uDiss;
-void main(){vec2 c=vUv-uDt*texture(uVel,vUv).xy*uTexel;o=vec4(texture(uSrc,c).rgb/(1.+uDiss*uDt),1.);}`),
+void main(){vec2 c=vUv-uDt*texture(uVel,vUv).xy*uTexel;o=texture(uSrc,c)/(1.+uDiss*uDt);}`),
       curl: prog(`uniform sampler2D uVel;
 void main(){float L=texture(uVel,vL).y,R=texture(uVel,vR).y,T=texture(uVel,vT).x,B=texture(uVel,vB).x;o=vec4(.5*(R-L-T+B),0.,0.,1.);}`),
       vort: prog(`uniform sampler2D uVel,uCurl;uniform float uAmt,uDt;
@@ -196,14 +196,20 @@ if(vL.x<0.)L=-C.x;if(vR.x>1.)R=-C.x;if(vT.y>1.)T=-C.y;if(vB.y<0.)B=-C.y;o=vec4(.
 void main(){float L=texture(uP,vL).x,R=texture(uP,vR).x,T=texture(uP,vT).x,B=texture(uP,vB).x;o=vec4((L+R+B+T-texture(uDiv,vUv).x)*.25,0.,0.,1.);}`),
       grad: prog(`uniform sampler2D uP,uVel;
 void main(){float L=texture(uP,vL).x,R=texture(uP,vR).x,T=texture(uP,vT).x,B=texture(uP,vB).x;o=vec4(texture(uVel,vUv).xy-vec2(R-L,T-B),0.,1.);}`),
-      disp: prog(`uniform sampler2D uVideo,uVel,uDye;uniform float uMir,uDisp;
-vec2 mu(vec2 s){return vec2(mix(s.x,1.-s.x,uMir),s.y);}
+      disp: prog(`uniform sampler2D uVideo,uVel,uDye;uniform float uMir,uDisp,uTime;
+vec2 mu(vec2 s){s=1.-abs(1.-mod(s,2.));return vec2(mix(s.x,1.-s.x,uMir),s.y);}
 void main(){
-  vec2 v=texture(uVel,vUv).xy*uTexel*uDisp, st=vUv-v;
-  vec3 cam=vec3(texture(uVideo,mu(st+v*.4)).r,texture(uVideo,mu(st)).g,texture(uVideo,mu(st-v*.4)).b);
-  vec3 d=texture(uDye,vUv).rgb;
-  float amt=clamp(max(d.r,max(d.g,d.b)),0.,1.);
-  vec3 col=mix(cam,cam*.8+d*.7,smoothstep(0.,1.,amt)*.5);
+  vec4 d=texture(uDye,vUv);
+  float m=smoothstep(.04,.45,d.a);
+  vec2 g=vec2(texture(uDye,vR).a-texture(uDye,vL).a,texture(uDye,vT).a-texture(uDye,vB).a);
+  vec2 v=texture(uVel,vUv).xy*uTexel*uDisp;
+  vec2 w=vec2(sin(vUv.y*14.+uTime*1.3),cos(vUv.x*14.-uTime*1.1))*.012*m;
+  vec2 st=vUv+clamp(-v*m*.6-g*.8*m+vec2(-g.y,g.x)*.9*m+w,-.06,.06);
+  vec3 cam=vec3(texture(uVideo,mu(st+g*.6)).r,texture(uVideo,mu(st)).g,texture(uVideo,mu(st-g*.6)).b);
+  vec3 dc=d.rgb/max(max(d.r,max(d.g,d.b)),1e-3);
+  vec3 col=mix(cam,cam*(.8+.5*dc),m*.18);
+  float e=clamp(length(g)*5.,0.,1.);
+  col+=dc*e*.35+vec3(pow(clamp(dot(normalize(g+1e-5),vec2(.6,.8)),0.,1.)*e,2.))*.2;
   o=vec4(col,1.);
 }`)
     };
@@ -257,11 +263,11 @@ function draw(pr, vals, texs, target) {
 }
 
 // empuja (dx,dy en píxeles de la imagen) y tiñe con `col` en el punto (x,y)
-function splat(x, y, dx, dy, col, rad) {
+function splat(x, y, dx, dy, col, rad, a) {
   const W = out.width, H = out.height, m = W * .05;
   const vals = { uAsp: W / H, uRad: rad, uPt: [x / W, 1 - y / H] };
-  draw(P.splat, { ...vals, uCol: [Math.max(-m, Math.min(m, dx)) / W * FORCE, -Math.max(-m, Math.min(m, dy)) / H * FORCE, 0] }, { uT: vel.read.tex }, vel.write); vel.swap();
-  draw(P.splat, { ...vals, uCol: col }, { uT: dye.read.tex }, dye.write); dye.swap();
+  draw(P.splat, { ...vals, uA: 0, uCol: [Math.max(-m, Math.min(m, dx)) / W * FORCE, -Math.max(-m, Math.min(m, dy)) / H * FORCE, 0] }, { uT: vel.read.tex }, vel.write); vel.swap();
+  draw(P.splat, { ...vals, uA: a, uCol: col }, { uT: dye.read.tex }, dye.write); dye.swap();
 }
 
 function stepFluid(dt) {
@@ -286,8 +292,8 @@ function brushHands() {
     if (!pr) return;
     const dx = p.x - pr.x, dy = p.y - pr.y, sp = Math.hypot(dx / out.width, dy / out.height);
     if (sp < .0015) return;
-    const amt = Math.min(1, Math.max(.15, sp * 45)), rad = Math.min(.006, Math.max(.0003, .22 * (k * h.span / out.width) ** 2));
-    splat(p.x, p.y, dx, dy, palRGB(hue / 360 + bi * .17 + p.x / out.width * .4).map(v => v * amt * .3), rad);
+    const amt = Math.min(1, Math.max(.2, sp * 40)), rad = Math.min(.012, Math.max(.001, .6 * (k * h.span / out.width) ** 2));
+    splat(p.x, p.y, dx, dy, palRGB(hue / 360 + bi * .17 + p.x / out.width * .4).map(v => v * amt * .3), rad, amt * .5);
   }));
 }
 
@@ -297,7 +303,7 @@ function renderFluid(dt) {
   stepFluid(dt);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vtex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-  draw(P.disp, { uMir: mirror() ? 1 : 0, uDisp: DISP }, { uVideo: vtex, uVel: vel.read.tex, uDye: dye.read.tex }, null);
+  draw(P.disp, { uMir: mirror() ? 1 : 0, uDisp: DISP, uTime: performance.now() / 1000 }, { uVideo: vtex, uVel: vel.read.tex, uDye: dye.read.tex }, null);
   ctx.drawImage(glc, 0, 0);
 }
 
