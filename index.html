@@ -41,7 +41,7 @@
 <body>
 <div id="start">
   <h1>Aire AR</h1>
-  <p>Apunta la cámara a una persona o a tu mano. Al moverse, la realidad se mezcla con colores.</p>
+  <p>Apunta la cámara y pasa la mano: donde la tocas, la realidad se quiebra como un prisma y se llena de color.</p>
   <button id="go">Activar cámara</button>
   <div id="msg"></div>
 </div>
@@ -123,11 +123,11 @@ Object.keys(PALS).forEach(n => {
 let lastVideoTime = -1, hands = [], hue = 180;
 
 const hints = {
-  desdibujar: "Mueve las manos (o a alguien) frente a la cámara",
+  desdibujar: "Pasa la mano frente a la cámara",
   luz: "Junta pulgar e índice y dibuja en el aire"
 };
 function setMode(m) {
-  mode = m; prevLum = null; prevBrush = {};
+  mode = m; prevBrush = {};
   document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   $("hint").textContent = hints[m];
 }
@@ -200,7 +200,7 @@ void main(){float L=texture(uP,vL).x,R=texture(uP,vR).x,T=texture(uP,vT).x,B=tex
 vec2 mu(vec2 s){return vec2(mix(s.x,1.-s.x,uMir),s.y);}
 void main(){
   vec2 v=texture(uVel,vUv).xy*uTexel*uDisp, st=vUv-v;
-  vec3 cam=vec3(texture(uVideo,mu(st+v*.12)).r,texture(uVideo,mu(st)).g,texture(uVideo,mu(st-v*.12)).b);
+  vec3 cam=vec3(texture(uVideo,mu(st+v*.4)).r,texture(uVideo,mu(st)).g,texture(uVideo,mu(st-v*.4)).b);
   vec3 d=texture(uDye,vUv).rgb;
   float amt=clamp(max(d.r,max(d.g,d.b)),0.,1.);
   vec3 col=mix(cam,cam*.8+d*.7,smoothstep(0.,1.,amt)*.5);
@@ -291,37 +291,9 @@ function brushHands() {
   }));
 }
 
-// movimiento de cualquier cosa en cámara (una persona, por ejemplo): flujo óptico liviano sobre una imagen chica
-const MW = 80, MH = 45;
-const mc = document.createElement("canvas"); mc.width = MW; mc.height = MH;
-const mctx = mc.getContext("2d", { willReadFrequently: true });
-let prevLum = null;
-function motionSplats() {
-  mctx.save(); if (mirror()) { mctx.translate(MW, 0); mctx.scale(-1, 1); }
-  mctx.drawImage(video, 0, 0, MW, MH); mctx.restore();
-  const d = mctx.getImageData(0, 0, MW, MH).data, n = MW * MH, lum = new Float32Array(n);
-  for (let i = 0; i < n; i++) lum[i] = d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11;
-  const prev = prevLum; prevLum = lum;
-  if (!prev) return;
-  const pts = []; let moving = 0;
-  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) {
-    const i = y * MW + x, It = lum[i] - prev[i];
-    if (Math.abs(It) < 22) continue;
-    moving++;
-    const Ix = (lum[i + 1] - lum[i - 1]) / 2, Iy = (lum[i + MW] - lum[i - MW]) / 2, k = -It / (Ix * Ix + Iy * Iy + 40);
-    pts.push({ x, y, vx: Math.max(-3, Math.min(3, k * Ix)), vy: Math.max(-3, Math.min(3, k * Iy)), m: Math.abs(It) });
-  }
-  if (moving > n * .3) return;   // se movió la cámara entera, no la escena
-  pts.sort((a, b) => b.m - a.m).slice(0, 5).forEach((q, j) => {
-    const amt = Math.min(.4, Math.max(.1, q.m / 160));
-    splat((q.x + .5) / MW * out.width, (q.y + .5) / MH * out.height, q.vx * out.width / MW, q.vy * out.height / MH,
-      palRGB(hue / 360 + j * .11 + q.x / MW * .5).map(v => v * amt * .6), .0009);
-  });
-}
-
 function renderFluid(dt) {
   if (!fluid) return drawVideoMirrored();
-  if (mode === "desdibujar") { brushHands(); motionSplats(); }
+  if (mode === "desdibujar") brushHands();
   stepFluid(dt);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vtex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
@@ -345,7 +317,7 @@ async function startCamera() {
   video.srcObject = stream;
   await video.play();
   out.width = video.videoWidth; out.height = video.videoHeight;
-  strokes = []; current = null; prevBrush = {}; prevLum = null; filters = [];
+  strokes = []; current = null; prevBrush = {}; filters = [];
   resizeFluid();
 }
 
