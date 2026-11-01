@@ -4,58 +4,98 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Eliasson app</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Comfortaa:wght@600&family=Rubik+Dirt&family=Caveat:wght@700&family=Permanent+Marker&family=Rubik+Glitch&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#121214; --fg:#F2F2EE; --corazon:#FF00B2;
+  :root { --bg:#121214; --fg:#F2F2EE; --serif:"Times New Roman",Times,serif; --sans:Helvetica,Arial,sans-serif;
     --rainbow:linear-gradient(110deg,#ff5f6d,#ffc371,#fff27a,#7dffb0,#6ee7ff,#8f9bff,#e58bff,#ff5f6d); }
   @keyframes flow { to { background-position:0 0,300% 0; } }
   @keyframes flowText { to { background-position:300% 0; } }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:Inter,system-ui,sans-serif; overflow:hidden; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:var(--sans); overflow:hidden; }
   canvas { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; }
   #ui { position:fixed; inset:0; z-index:1; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; padding:max(12px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom)); }
   #ui::before { content:""; position:absolute; left:0; right:0; bottom:0; height:40%; z-index:-1; background:linear-gradient(transparent,rgba(0,0,0,.55)); }
   button { font:inherit; color:var(--fg); background:rgba(20,20,30,.6); border:1px solid rgba(255,255,255,.25); border-radius:999px; padding:10px 16px; backdrop-filter:blur(8px); cursor:pointer; pointer-events:auto; }
-  .top { display:flex; justify-content:flex-end; }
+  .top { display:flex; justify-content:space-between; }
+  #infoBtn { font-family:var(--serif); font-style:italic; font-size:22px; }
   .ic { width:44px; height:44px; padding:0; display:grid; place-items:center; }
   #dock { display:flex; flex-direction:column; align-items:center; gap:8px; }
   #hint { font-size:14px; text-shadow:0 1px 4px #000; opacity:.9; transition:opacity .4s; pointer-events:none; text-align:center; }
-  #pals { display:flex; gap:2px; }
+  #pals { display:none; gap:2px; }
+  body[data-mode=color] #pals { display:flex; }
+  body[data-mode=color] #clear { visibility:hidden; }
   .dot { width:44px; height:44px; padding:0; background:none; border:0; backdrop-filter:none; display:grid; place-items:center; }
-  .dot i { display:block; width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,.55); transition:.15s; }
+  .dot i { display:block; width:26px; height:26px; border-radius:50%; border:2px solid rgba(255,255,255,.7); transition:.15s; box-shadow:inset 0 2px 3px rgba(255,255,255,.55); }
+  .dot.loop i { animation:spin 6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .dot.sel i { width:32px; height:32px; border-color:#fff; box-shadow:0 0 14px rgba(255,255,255,.7); }
   .seg { display:flex; background:rgba(18,18,20,.55); border-radius:999px; padding:3px; backdrop-filter:blur(8px); pointer-events:auto; }
-  .seg button { border:0; background:none; padding:8px 20px; font-size:14px; }
+  .seg button { border:0; background:none; padding:8px 12px; font-size:13px; white-space:nowrap; }
   .seg button.on { background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--rainbow); background-size:100% 100%,300% 100%; animation:flow 9s linear infinite; color:#10131a; font-weight:600; box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 4px 16px rgba(120,140,255,.35); }
   #actions { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; width:100%; max-width:420px; }
   #clear { justify-self:start; padding:10px 14px; font-size:14px; }
   #rec { justify-self:end; width:52px; height:52px; padding:0; border:3px solid #ff4d4d; background:rgba(255,77,77,.25); }
   #rec.on { background:#ff4d4d; }
   #shutter { width:70px; height:70px; padding:0; border:4px solid #fff; background:rgba(255,255,255,.2); }
-  #start { position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center; background:var(--bg); text-align:center; padding:24px; }
-  #start h1 { margin:0; font-size:2.6rem; font-family:Comfortaa,Inter,sans-serif; font-weight:600; background:var(--rainbow); background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:flowText 8s linear infinite; }
-  #start p { max-width:32ch; opacity:.8; margin:0; }
-  #start button { background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--rainbow); background-size:100% 100%,300% 100%; animation:flow 9s linear infinite; color:#10131a; border:1px solid rgba(255,255,255,.75); font-weight:600; padding:14px 30px; font-size:1.1rem; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 10px 34px rgba(120,140,255,.4); }
+  #start { position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; gap:12px; align-items:center; justify-content:flex-end; background:linear-gradient(transparent 18%,rgba(18,18,20,.6) 42%,var(--bg) 72%),url(olafur.webp) 56% 12%/cover,var(--bg); text-align:center; padding:24px 22px max(22px,env(safe-area-inset-bottom)); }
+  #start::before { content:""; position:absolute; inset:0; background:var(--rainbow); background-size:300% 100%; mix-blend-mode:color; opacity:.4; animation:flowText 14s linear infinite; pointer-events:none; }
+  #start > * { position:relative; }
+  #start .kicker { opacity:.7; font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+  #start h1 { margin:0; font-family:var(--serif); font-weight:400; font-size:2.1rem; letter-spacing:.06em; background:var(--rainbow); background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:flowText 8s linear infinite; }
+  #start h2 { margin:0; font-family:var(--serif); font-style:italic; font-weight:400; font-size:1.1rem; opacity:.9; }
+  #start .bio { max-height:22vh; overflow-y:auto; font-size:14px; line-height:1.45; opacity:.85; max-width:46ch; text-align:left; padding-right:4px; }
+  #start .bio p { margin:0 0 .6em; }
+  #start button { background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--rainbow); background-size:100% 100%,300% 100%; animation:flow 9s linear infinite; color:#10131a; border:1px solid rgba(255,255,255,.75); font-family:var(--serif); font-size:1.05rem; padding:13px 26px; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 10px 34px rgba(120,140,255,.4); }
+  #start .fine { font-size:11px; opacity:.55; max-width:44ch; }
+  #start a { color:var(--fg); font-size:13px; opacity:.8; }
   #msg { font-size:13px; opacity:.7; min-height:1em; }
   #err { position:fixed; z-index:9; left:12px; right:12px; top:12px; display:none; background:#7a0020; color:#fff; padding:10px 14px; border-radius:12px; font-size:13px; word-break:break-word; }
-  #toast { position:fixed; z-index:2; top:70px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.65); padding:8px 16px; border-radius:999px; font-size:18px; opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap; }
+  #toast { font-family:var(--serif); position:fixed; z-index:7; top:70px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.65); padding:8px 16px; border-radius:999px; font-size:18px; opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap; }
+  #info { position:fixed; inset:0; z-index:6; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.5); }
+  #info.open { display:flex; }
+  #info .card { max-width:440px; max-height:82vh; overflow-y:auto; background:rgba(22,22,26,.78); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.28); border-radius:22px; padding:24px 22px; box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 20px 60px rgba(0,0,0,.5); }
+  #info small { opacity:.65; font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+  #info h3 { margin:6px 0 2px; font-family:var(--serif); font-weight:400; font-size:1.9rem; background:var(--rainbow); background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:flowText 8s linear infinite; }
+  #info h4 { margin:0 0 14px; font-family:var(--serif); font-style:italic; font-weight:400; font-size:1.05rem; opacity:.9; }
+  #info p { font-size:14.5px; line-height:1.5; margin:0 0 .8em; }
+  #info .fine { font-size:11px; opacity:.55; }
+  #info button { display:block; margin:14px auto 0; background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--rainbow); background-size:100% 100%,300% 100%; animation:flow 9s linear infinite; color:#10131a; font-weight:600; padding:11px 30px; border:1px solid rgba(255,255,255,.7); }
 </style>
 </head>
 <body>
 <div id="start">
-  <h1>Eliasson app</h1>
-  <p>Apunta la cámara y pasa la mano: donde la tocas, la realidad se quiebra como un prisma y se llena de color.</p>
-  <button id="go">Activar cámara</button>
+  <div class="kicker">Inspirada en las investigaciones de</div>
+  <h1>OLAFUR ELIASSON</h1>
+  <h2>El arte de transformar nuestra percepción</h2>
+  <div class="bio">
+    <p>Nacido en Copenhague en 1967, Olafur Eliasson es un artista danés-islandés que transforma fenómenos naturales en experiencias extraordinarias. Su obra cruza arte, ciencia, tecnología y arquitectura para explorar los límites de nuestra percepción.</p>
+    <p>Construye soles artificiales, hace aparecer arcoíris, introduce ríos en museos y utiliza la luz para transformar los colores que vemos. Pero su verdadera innovación no está solamente en lo que crea, sino en cómo nos hace participar.</p>
+    <p>En sus instalaciones, el espectador deja de ser un observador: su cuerpo, su movimiento y su mirada completan la experiencia. Porque para Eliasson el arte no es solo algo que miramos. Es algo que experimentamos.</p>
+    <p>¿Y si cambiar nuestra forma de mirar también cambiara nuestra realidad?</p>
+  </div>
+  <button id="go">Explorá la luz. Transformá tu mirada.</button>
   <div id="msg"></div>
+  <a href="https://olafureliasson.net" target="_blank" rel="noopener">Studio Olafur Eliasson</a>
+  <div class="fine">Aplicación inspirada en las investigaciones de Eliasson. No es una creación oficial del artista.</div>
 </div>
 
 <canvas id="out"></canvas>
 <div id="toast"></div>
 <div id="err"></div>
 
+<div id="info" role="dialog" aria-modal="true">
+  <div class="card">
+    <small id="iKick"></small>
+    <h3 id="iTitle"></h3>
+    <h4 id="iSub"></h4>
+    <div id="iBody"></div>
+    <p class="fine">Aplicación inspirada en las investigaciones de Olafur Eliasson. No es una creación oficial del artista.</p>
+    <button id="iOk">Entendido</button>
+  </div>
+</div>
+
 <div id="ui">
   <div class="top">
+    <button id="infoBtn" class="ic" aria-label="Qué estamos haciendo">i</button>
     <button id="flip" class="ic" aria-label="Girar cámara">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
     </button>
@@ -65,7 +105,8 @@
     <div id="pals"></div>
     <div class="seg" id="modes">
       <button data-mode="desdibujar" class="on">Desdibujar</button>
-      <button data-mode="luz">Luz</button>
+      <button data-mode="color">Colores</button>
+      <button data-mode="uno">Un solo color</button>
     </div>
     <div id="actions">
       <button id="clear">Borrar</button>
@@ -90,62 +131,113 @@ const ANDROID = /Android/i.test(navigator.userAgent);
 if (/FBAN|FBAV|Instagram|WhatsApp|; wv\)/i.test(navigator.userAgent)) $("msg").textContent = "Estás en el navegador de otra app: abrí este link en Chrome o Safari para que ande la cámara.";
 
 let mode = "desdibujar", facing = matchMedia("(pointer:coarse)").matches ? "environment" : "user", landmarker = null, stream = null;
-let strokes = [], current = null;
 
-// ---- paletas Bioferia
-const PALS = {
-  Bioferia:[[181,86,71],[52,84,62],[217,84,62],[0,100,50],[318,100,50]],
-  Aire:    [[181,86,71],[217,84,62],[200,90,80]],
-  Tierra:  [[52,84,62],[30,95,55],[0,100,50]],
-  Agua:    [[217,84,62],[181,86,71],[235,80,60]],
-  Fuego:   [[0,100,50],[20,100,52],[318,100,50]],
-  Corazón: [[318,100,50],[330,100,65],[0,100,50]]
-};
-const PAL_FONT = { Bioferia:"Inter", Aire:"Comfortaa", Tierra:"Rubik Dirt", Agua:"Caveat", Fuego:"Permanent Marker", Corazón:"Rubik Glitch" };
-const PAL_DOT = { Bioferia:"conic-gradient(#79F2F4,#EFD74F,#4F8FEF,#FF0000,#FF00B2,#79F2F4)", Aire:"#79F2F4", Tierra:"#EFD74F", Agua:"#4F8FEF", Fuego:"#FF0000", Corazón:"#FF00B2" };
-let palName = "Bioferia";
+// ---- arcoíris de Eliasson: naranja, amarillo, verde, violeta, azul, magenta
+const RAINBOW = [[20,100,60],[50,100,55],[150,70,50],[265,90,65],[220,95,62],[315,100,62]];
 
-// color de la paleta en fase u (0..1), mezclando suavemente entre paradas
-function palHSL(u) {
-  const st = PALS[palName], n = st.length;
+// color del arcoíris en fase u (0..1), mezclando suavemente entre paradas
+function palRGB(u) {
+  const st = RAINBOW, n = st.length;
   u = ((u % 1) + 1) % 1 * n;
   const i = Math.floor(u), f = u - i, A = st[i % n], B = st[(i + 1) % n];
   let dh = B[0] - A[0]; if (dh > 180) dh -= 360; if (dh < -180) dh += 360;
-  return [(A[0] + dh * f + 360) % 360, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f];
-}
-function pc(u, a = 1) { const [h, s, l] = palHSL(u); return `hsla(${h},${s}%,${l}%,${a})`; }
-function palRGB(u) {
-  const [h, s0, l0] = palHSL(u), s = s0 / 100, l = l0 / 100, a = s * Math.min(l, 1 - l);
-  const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
-  return [f(0), f(8), f(4)];
+  const h = (A[0] + dh * f + 360) % 360, s = (A[1] + (B[1] - A[1]) * f) / 100, l = (A[2] + (B[2] - A[2]) * f) / 100, a = s * Math.min(l, 1 - l);
+  const g = n2 => { const k = (n2 + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return [g(0), g(8), g(4)];
 }
 
+// filtros de color (el segundo modo): cada uno tiñe todo el lugar como un vidrio.
+// Además hay un modo en bucle que pasa de un color al siguiente con transición suave.
+const FILTERS = [
+  ["Naranja", "#FF7A1A", [1, .48, .1]], ["Amarillo", "#FFD400", [1, .83, 0]], ["Verde", "#19C37D", [.1, .85, .45]],
+  ["Violeta", "#8A4DFF", [.54, .3, 1]], ["Azul", "#2F6BFF", [.18, .42, 1]], ["Magenta", "#FF2BD6", [1, .17, .84]]
+];
+const LOOP = FILTERS.length, LOOP_SECS = 4;   // segundos por color
+let tintIdx = 3, tintCur = [1, 1, 1], tintAmt = 0, monoAmt = 0;
 const pals = $("pals");
-Object.keys(PALS).forEach(n => {
-  const b = document.createElement("button"); b.className = "dot"; b.setAttribute("aria-label", n);
-  b.innerHTML = `<i style="background:${PAL_DOT[n]}"></i>`;
-  b.classList.toggle("sel", n === palName);
-  b.onclick = () => {
-    palName = n; [...pals.children].forEach(c => c.classList.toggle("sel", c === b));
-    toast(n, PAL_FONT[n]);
+[...FILTERS, ["Arcoíris en bucle", "conic-gradient(#FF7A1A,#FFD400,#19C37D,#2F6BFF,#8A4DFF,#FF2BD6,#FF7A1A)"]].forEach(([name, bg], i) => {
+  const b = document.createElement("button"); b.className = "dot" + (i === LOOP ? " loop" : ""); b.setAttribute("aria-label", name);
+  b.innerHTML = `<i style="background:${bg}"></i>`;
+  b.classList.toggle("sel", i === tintIdx);
+  b.onclick = () => {   // tocar la opción elegida otra vez quita el filtro
+    tintIdx = tintIdx === i ? -1 : i;
+    [...pals.children].forEach((c, j) => c.classList.toggle("sel", j === tintIdx));
+    toast(tintIdx < 0 ? "Sin filtro" : name);
   };
   pals.appendChild(b);
 });
+function updateTint(dt) {
+  const on = mode === "color" && tintIdx >= 0;
+  let tgt = tintCur;
+  if (on && tintIdx < LOOP) tgt = FILTERS[tintIdx][2];
+  else if (on) {   // bucle: cada color se mezcla con el siguiente, sin saltos
+    const ph = performance.now() / 1000 / LOOP_SECS, i = Math.floor(ph) % LOOP, f = ph - Math.floor(ph), e = f * f * (3 - 2 * f);
+    tgt = FILTERS[i][2].map((v, k) => v + (FILTERS[(i + 1) % LOOP][2][k] - v) * e);
+  }
+  const a = 1 - Math.exp(-6 * dt);
+  tintCur = tintCur.map((v, i) => v + (tgt[i] - v) * a);
+  tintAmt += ((on ? 1 : 0) - tintAmt) * a;
+  monoAmt += ((mode === "uno" ? 1 : 0) - monoAmt) * a;
+}
+
+// ---- ventanas que explican cada modo desde Eliasson (salen una sola vez; la "i" las vuelve a abrir)
+const INFO = {
+  desdibujar: {
+    kicker: "Modo 1", title: "Desdibujar", sub: "Tu cuerpo completa la obra",
+    body: [
+      "Pasá la mano frente a la cámara: donde se mueve, la realidad se quiebra y se refracta, como si la miraras a través de un vidrio o un prisma.",
+      "Olafur Eliasson parte de una idea simple: ver no es un acto automático. En Beauty (1993), un foco de luz atraviesa una cortina de gotas de agua y aparece un arcoíris, pero solo si estás en el lugar justo: si te movés, cambia o desaparece. La experiencia es real, aunque las condiciones que la producen están construidas.",
+      "Por eso sus obras no esconden el mecanismo: lo muestran. Acá pasa lo mismo. Tu mano es el cuerpo que altera la luz, y lo que ves depende de cómo te movés y hacia dónde mirás."
+    ]
+  },
+  color: {
+    kicker: "Modo 2", title: "Lugar coloreado", sub: "El color es una experiencia física",
+    body: [
+      "Apuntá la cámara hacia algo y elegí un color. El lugar entero se transforma: es el mismo espacio, visto a través de otro filtro. Podés dejar un solo color o activar el arcoíris en bucle, que pasa de un color al siguiente sin cortes.",
+      "En Your rainbow panorama (2011), una pasarela circular de 150 metros sobre el museo ARoS de Aarhus, vidrios rojos, naranjas, amarillos, verdes, azules y violetas filtran el paisaje mientras caminás: la ciudad no se ve igual durante todo el recorrido.",
+      "Para Eliasson el color no es algo aplicado sobre un objeto: lo produce la luz y lo registra tu visión. Cambiá de filtro y fijate qué cambia en vos, y no solo en la imagen."
+    ]
+  },
+  uno: {
+    kicker: "Modo 3", title: "Una sola luz", sub: "Cuando el color desaparece",
+    body: [
+      "Mirá a tu alrededor con la cámara: todo se reduce a una única luz amarilla. Los colores desaparecen y solo quedan los tonos de esa luz, del más claro al más oscuro.",
+      "Es la idea de Room for one colour: lámparas de monofrecuencia amarilla emiten un rango muy reducido de luz y suprimen gran parte de la información cromática que normalmente recibe el ojo. Como consecuencia, las personas y los objetos aparecen reducidos a tonalidades inusuales.",
+      "Eliasson usa un mecanismo simple para mostrar algo profundo: el color no es una propiedad fija de las cosas, lo produce la luz y lo registra tu visión. Si cambia la luz, cambia el mundo que percibís."
+    ]
+  }
+};
+const seen = new Set();
+const seenKey = m => "eliasson:visto:" + m;
+function wasSeen(m) { try { return seen.has(m) || !!localStorage.getItem(seenKey(m)); } catch { return seen.has(m); } }
+function markSeen(m) { seen.add(m); try { localStorage.setItem(seenKey(m), "1"); } catch {} }
+function openInfo(m) {
+  const d = INFO[m];
+  $("iKick").textContent = d.kicker; $("iTitle").textContent = d.title; $("iSub").textContent = d.sub;
+  $("iBody").replaceChildren(...d.body.map(t => Object.assign(document.createElement("p"), { textContent: t })));
+  $("info").classList.add("open"); markSeen(m);
+}
+$("iOk").onclick = () => $("info").classList.remove("open");
+$("info").onclick = e => { if (e.target === $("info")) $("info").classList.remove("open"); };
+$("infoBtn").onclick = () => openInfo(mode);
 let lastVideoTime = -1, hands = [], hue = 180;
 
 const hints = {
-  desdibujar: "Pasa la mano frente a la cámara",
-  luz: "Junta pulgar e índice y dibuja en el aire"
+  desdibujar: "Pasá la mano frente a la cámara",
+  color: "Apuntá a algo y elegí un color",
+  uno: "Mirá a tu alrededor: solo existe una luz"
 };
-function setMode(m) {
+function setMode(m, silent) {
   mode = m; prevBrush = {};
+  document.body.dataset.mode = m;
   document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   $("hint").textContent = hints[m];
+  if (!silent && !wasSeen(m)) openInfo(m);
 }
 document.querySelectorAll("#modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
 
-function toast(t, font) {
-  const el = $("toast"); el.textContent = t; el.style.fontFamily = (font ? font + "," : "") + "Inter,sans-serif"; el.style.opacity = 1;
+function toast(t) {
+  const el = $("toast"); el.textContent = t; el.style.opacity = 1;
   clearTimeout(toast.t); toast.t = setTimeout(() => el.style.opacity = 0, 1400);
 }
 
@@ -207,7 +299,7 @@ if(vL.x<0.)L=-C.x;if(vR.x>1.)R=-C.x;if(vT.y>1.)T=-C.y;if(vB.y<0.)B=-C.y;o=vec4(.
 void main(){float L=texture(uP,vL).x,R=texture(uP,vR).x,T=texture(uP,vT).x,B=texture(uP,vB).x;o=vec4((L+R+B+T-texture(uDiv,vUv).x)*.25,0.,0.,1.);}`),
       grad: prog(`uniform sampler2D uP,uVel;
 void main(){float L=texture(uP,vL).x,R=texture(uP,vR).x,T=texture(uP,vT).x,B=texture(uP,vB).x;o=vec4(texture(uVel,vUv).xy-vec2(R-L,T-B),0.,1.);}`),
-      disp: prog(`uniform sampler2D uVideo,uVel,uDye;uniform float uMir,uTime;
+      disp: prog(`uniform sampler2D uVideo,uVel,uDye;uniform float uMir,uTime,uTintAmt,uMono;uniform vec3 uTint;
 vec2 mu(vec2 s){s=1.-abs(1.-mod(s,2.));return vec2(mix(s.x,1.-s.x,uMir),s.y);}
 void main(){
   vec4 d=texture(uDye,vUv);
@@ -220,7 +312,11 @@ void main(){
   vec3 col=mix(cam,cam*(.9+.3*dc),m*.1);
   float e=clamp(length(g)*4.,0.,1.)*z;
   col+=dc*e*.22+vec3(pow(clamp(dot(normalize(g+1e-5),vec2(.6,.8)),0.,1.)*e,2.))*.12;
-  o=vec4(col,1.);
+  float lum=dot(col,vec3(.299,.587,.114));
+  col=mix(col,vec3(1.,.76,0.)*clamp(pow(lum,.9)*1.35,0.,1.),uMono);
+  vec3 glass=mix(col*mix(vec3(1.),uTint*1.7,.92),uTint*(.12+lum*1.5),.5)+uTint*.04;
+  glass*=1.-.22*smoothstep(.35,.9,length(vUv-.5));
+  o=vec4(mix(col,glass,uTintAmt),1.);
 }`)
     };
   } catch (e) { console.error(e); return false; }
@@ -309,13 +405,22 @@ function brushHands() {
 }
 
 function renderFluid(dt) {
-  if (!fluid) return drawVideoMirrored();
+  if (!fluid) { drawVideoMirrored(); return tintFallback(); }
   if (mode === "desdibujar") brushHands();
   stepFluid(dt);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vtex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-  draw(P.disp, { uMir: mirror() ? 1 : 0, uTime: performance.now() / 1000 }, { uVideo: vtex, uVel: vel.read.tex, uDye: dye.read.tex }, null);
+  draw(P.disp, { uMir: mirror() ? 1 : 0, uTime: performance.now() / 1000, uTint: tintCur, uTintAmt: tintAmt, uMono: monoAmt }, { uVideo: vtex, uVel: vel.read.tex, uDye: dye.read.tex }, null);
   ctx.drawImage(glc, 0, 0);
+}
+
+// sin WebGL: el filtro se aplica con la mezcla "multiply" del canvas 2D
+function tintFallback() {
+  if (monoAmt > .01) { ctx.save(); ctx.globalCompositeOperation = "color"; ctx.globalAlpha = monoAmt; ctx.fillStyle = "#FFC200"; ctx.fillRect(0, 0, out.width, out.height); ctx.restore(); }
+  if (tintAmt < .01) return;
+  ctx.save(); ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = tintAmt * .9;
+  ctx.fillStyle = `rgb(${tintCur.map(v => Math.round(Math.min(1, v * 1.2 + .1) * 255)).join(",")})`;
+  ctx.fillRect(0, 0, out.width, out.height); ctx.restore();
 }
 
 function drawVideoMirrored() {
@@ -334,7 +439,7 @@ async function startCamera() {
   video.srcObject = stream;
   await video.play();
   out.width = video.videoWidth; out.height = video.videoHeight;
-  strokes = []; current = null; prevBrush = {}; filters = [];
+  prevBrush = {}; filters = [];
   resizeFluid();
 }
 
@@ -360,6 +465,7 @@ $("go").onclick = async () => {
     await initLandmarker();
     $("start").style.display = "none";
     requestAnimationFrame(loop);
+    if (!wasSeen(mode)) openInfo(mode);
   } catch (e) {
     $("go").disabled = false;
     $("msg").textContent = "No se pudo iniciar (" + (e.name || "error") + "): " + e.message + " (necesita HTTPS o localhost y permiso de cámara)";
@@ -372,7 +478,7 @@ $("flip").onclick = async () => {
   facing = facing === "user" ? "environment" : "user";
   try { await startCamera(); } catch (e) { toast("No se pudo girar la cámara"); }
 };
-$("clear").onclick = () => { strokes = []; current = null; clearFluid(); };
+$("clear").onclick = clearFluid;
 
 // ---- mapeo de coordenadas (espejo en cámara frontal)
 const mirror = () => facing === "user";
@@ -386,55 +492,17 @@ function analyze(res, t) {
     const fs = filters[hi] || (filters[hi] = l.map(() => [new OneEuro(), new OneEuro()]));
     const pts = l.map((lm, i) => P2(lm, fs[i][0].f(lm.x, t), fs[i][1].f(lm.y, t)));
     const span = dist(pts[0], pts[9]);               // muñeca -> nudillo medio
-    const pinch = dist(pts[4], pts[8]) < span * 0.35;
-    const open = [8, 12, 16, 20].every(i => dist(pts[i], pts[0]) > span * 1.5);
-    return { pts, span, pinch, open, tip: pts[8], palm: { x: (pts[0].x + pts[9].x) / 2, y: (pts[0].y + pts[9].y) / 2 } };
+    return { pts, span };
   });
 }
 
-function update(t) {
-  hue = (hue + 0.6) % 360;
-  if (mode !== "luz") { current = null; return; }
-  const pinching = hands.filter(h => h.pinch);
-  if (pinching.length) {
-    const p = { x: (pinching[0].pts[4].x + pinching[0].tip.x) / 2, y: (pinching[0].pts[4].y + pinching[0].tip.y) / 2 };
-    if (!current) { current = { pts: [], t0: t }; strokes.push(current); }
-    const last = current.pts[current.pts.length - 1];
-    const s = last ? { x: last.x + (p.x - last.x) * 0.5, y: last.y + (p.y - last.y) * 0.5 } : p; // suavizado
-    current.pts.push({ ...s, h: hue, t });
-  } else current = null;
-  strokes.forEach(s => s.pts = s.pts.filter(p => t - p.t < 6000));
-  strokes = strokes.filter(s => s.pts.length || s === current);
-}
-
-function drawTrails(t) {
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  strokes.forEach(s => {
-    for (let i = 1; i < s.pts.length; i++) {
-      const a = s.pts[i - 1], b = s.pts[i];
-      const f = 1 - (t - b.t) / 6000;
-      ctx.strokeStyle = pc(b.h / 360, f);
-      ctx.shadowColor = pc(b.h / 360); ctx.shadowBlur = 20;
-      ctx.lineWidth = 3 + 8 * f;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    }
-  });
-  ctx.shadowBlur = 0;
-}
-
-function drawCursors() {
-  hands.forEach(h => {
-    ctx.fillStyle = h.pinch ? "#fff" : "rgba(255,255,255,.45)";
-    ctx.beginPath(); ctx.arc(h.tip.x, h.tip.y, h.pinch ? 9 : 6, 0, Math.PI * 2); ctx.fill();
-  });
-}
-
-let cursorsVisible = true, lastT = 0;
+let lastT = 0;
 function loop(t) {
   requestAnimationFrame(loop);
   if (video.readyState < 2) return;
   const dt = Math.min((t - lastT) / 1000 || .016, .05); lastT = t;
-  if (video.currentTime !== lastVideoTime && landmarker) {
+  if (mode !== "desdibujar") hands = [];   // el filtro de color no necesita las manos
+  else if (video.currentTime !== lastVideoTime && landmarker) {
     lastVideoTime = video.currentTime;
     try { analyze(landmarker.detectForVideo(video, t), t / 1000); }
     catch (e) {
@@ -442,13 +510,12 @@ function loop(t) {
       else showErr("Manos: " + e.message);
     }
   }
-  update(t);
+  hue = (hue + 0.6) % 360;
+  updateTint(dt);
   renderFluid(dt);
-  drawTrails(t);
-  if (cursorsVisible && mode === "luz") drawCursors();
-  $("hint").style.opacity = hands.length ? 0 : .9;
+  $("hint").style.opacity = mode === "desdibujar" && hands.length ? 0 : .9;
 }
-setMode("desdibujar");
+setMode("desdibujar", true);
 
 // ---- foto y video (se guardan desde el canvas, así incluyen los efectos)
 function download(blob, name) {
@@ -458,12 +525,7 @@ function download(blob, name) {
 }
 const stamp = () => new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 
-$("shutter").onclick = () => {
-  cursorsVisible = false;
-  requestAnimationFrame(() => requestAnimationFrame(() => {   // un frame sin cursor
-    out.toBlob(b => { download(b, `aire-ar-${stamp()}.png`); toast("Foto guardada"); cursorsVisible = true; }, "image/png");
-  }));
-};
+$("shutter").onclick = () => out.toBlob(b => { download(b, `eliasson-${stamp()}.png`); toast("Foto guardada"); }, "image/png");
 
 let recorder = null, chunks = [];
 $("rec").onclick = () => {
@@ -475,7 +537,7 @@ $("rec").onclick = () => {
   recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
   recorder.onstop = () => {
     const type = recorder.mimeType || "video/webm";
-    download(new Blob(chunks, { type }), `aire-ar-${stamp()}.${type.includes("mp4") ? "mp4" : "webm"}`);
+    download(new Blob(chunks, { type }), `eliasson-${stamp()}.${type.includes("mp4") ? "mp4" : "webm"}`);
     recorder = null; $("rec").classList.remove("on"); toast("Video guardado");
   };
   recorder.start(); $("rec").classList.add("on"); toast("Grabando…");
