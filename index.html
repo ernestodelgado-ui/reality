@@ -74,7 +74,6 @@
 </head>
 <body>
 <div id="start">
-  <div class="kicker">Inspirada en las investigaciones de</div>
   <h1>OLAFUR ELIASSON</h1>
   <h2>El arte de transformar nuestra percepción</h2>
   <button id="go">Explorá la luz. Transformá tu mirada.</button>
@@ -128,9 +127,9 @@
     <div id="hint"></div>
     <div id="pals"></div>
     <div class="seg" id="modes">
-      <button data-mode="desdibujar" class="on">Desdibujar</button>
-      <button data-mode="color">Colores</button>
-      <button data-mode="uno">Un solo color</button>
+      <button data-mode="desdibujar" class="on">Movimiento</button>
+      <button data-mode="color">Arcoíris</button>
+      <button data-mode="uno">Monocroma</button>
     </div>
     <div id="actions">
       <button id="clear">Borrar</button>
@@ -207,7 +206,7 @@ function updateTint(dt) {
 // ---- ventanas que explican cada modo desde Eliasson (salen una sola vez; la "i" las vuelve a abrir)
 const INFO = {
   desdibujar: {
-    kicker: "Modo 1", title: "Desdibujar", sub: "Tu cuerpo completa la obra",
+    kicker: "Modo 1", title: "Movimiento", sub: "Tu cuerpo completa la obra",
     body: [
       "Pasá la mano frente a la cámara: donde se mueve, la realidad se quiebra y se refracta, como si la miraras a través de un vidrio o un prisma.",
       "Olafur Eliasson parte de una idea simple: ver no es un acto automático. En Beauty (1993), un foco de luz atraviesa una cortina de gotas de agua y aparece un arcoíris, pero solo si estás en el lugar justo: si te movés, cambia o desaparece. La experiencia es real, aunque las condiciones que la producen están construidas.",
@@ -215,7 +214,7 @@ const INFO = {
     ]
   },
   color: {
-    kicker: "Modo 2", title: "Lugar coloreado", sub: "El color es una experiencia física",
+    kicker: "Modo 2", title: "Arcoíris", sub: "El color es una experiencia física",
     body: [
       "Apuntá la cámara hacia algo y elegí un color. El lugar entero se transforma: es el mismo espacio, visto a través de otro filtro. Podés dejar un solo color o activar el arcoíris en bucle, que pasa de un color al siguiente sin cortes.",
       "En Your rainbow panorama (2011), una pasarela circular de 150 metros sobre el museo ARoS de Aarhus, vidrios rojos, naranjas, amarillos, verdes, azules y violetas filtran el paisaje mientras caminás: la ciudad no se ve igual durante todo el recorrido.",
@@ -223,7 +222,7 @@ const INFO = {
     ]
   },
   uno: {
-    kicker: "Modo 3", title: "Una sola luz", sub: "Cuando el color desaparece",
+    kicker: "Modo 3", title: "Monocroma", sub: "Cuando el color desaparece",
     body: [
       "Mirá a tu alrededor con la cámara: todo se reduce a una única luz amarilla. Los colores desaparecen y solo quedan los tonos de esa luz, del más claro al más oscuro.",
       "Es la idea de Room for one colour: lámparas de monofrecuencia amarilla emiten un rango muy reducido de luz y suprimen gran parte de la información cromática que normalmente recibe el ojo. Como consecuencia, las personas y los objetos aparecen reducidos a tonalidades inusuales.",
